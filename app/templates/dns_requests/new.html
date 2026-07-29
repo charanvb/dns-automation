@@ -60,7 +60,7 @@
                        hx-get="/dns-requests/zones/search"
                        hx-trigger="keyup changed delay:350ms"
                        hx-target="#zoneSuggestions"
-                       hx-vals="js:{q: event.target.value}"
+                       hx-vals="js:{q: this.value}"
                        hx-indicator="#zoneSpinner">
                 <span class="input-group-text bg-transparent" id="zoneSpinner"
                       style="display:none">

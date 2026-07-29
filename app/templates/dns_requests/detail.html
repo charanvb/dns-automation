@@ -197,6 +197,19 @@
 
           </dl>
 
+          {# Execute / Retry in Micetro (approvers and admins) #}
+          {% if req.status in ('approved', 'failed') and (current_user.is_admin or current_user.is_approver) %}
+          <hr>
+          <form method="post" action="/dns-requests/{{ req.id }}/execute">
+            <button type="submit" class="btn w-100
+              {% if req.status == 'failed' %}btn-warning{% else %}btn-primary{% endif %}"
+                    onclick="return confirm('Push DNS changes to Micetro now?')">
+              <i class="bi bi-cloud-upload me-1"></i>
+              {% if req.status == 'failed' %}Retry in Micetro{% else %}Execute in Micetro{% endif %}
+            </button>
+          </form>
+          {% endif %}
+
           {# Submit draft action #}
           {% if req.status == 'draft' and (current_user.is_admin or (req.requester_id | string) == (current_user.id | string)) %}
           <hr>

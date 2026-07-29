@@ -214,7 +214,35 @@ async def approval_action(
         return RedirectResponse(f"/dns-requests/{request_id}", status_code=303)
 
     if decision == "approve":
-        _flash(request, f"{dns_req.request_number} approved.", "success")
+        # Immediately execute the DNS changes in Micetro
+        try:
+            await svc.execute_in_micetro(dns_req.id)
+            _flash(request, f"{dns_req.request_number} approved and executed in Micetro.", "success")
+        except AppError as exec_exc:
+            _flash(
+                request,
+                f"{dns_req.request_number} approved but Micetro execution failed: {exec_exc.detail}",
+                "danger",
+            )
     else:
         _flash(request, f"{dns_req.request_number} rejected.", "warning")
     return RedirectResponse(f"/dns-requests/{dns_req.id}", status_code=303)
+
+
+# ── Manual execute / retry ─────────────────────────────────────────────────
+
+@router.post("/{request_id}/execute", response_class=HTMLResponse)
+async def execute_request(
+    request_id: str,
+    request: Request,
+    current_user=Depends(require_approver),
+    db: AsyncSession = Depends(get_db),
+):
+    """Manually trigger Micetro execution for an approved or failed request."""
+    svc = DNSRequestService(db)
+    try:
+        dns_req = await svc.execute_in_micetro(request_id)
+        _flash(request, f"{dns_req.request_number} executed in Micetro successfully.", "success")
+    except AppError as exc:
+        _flash(request, exc.detail, "danger")
+    return RedirectResponse(f"/dns-requests/{request_id}", status_code=303)

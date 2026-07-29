@@ -10,6 +10,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import get_settings
 from app.exceptions import AppError
+from app.micetro.dns_service import dns_service
+from app.micetro.exceptions import MicetroError
 from app.models.dns_request import DNSRequest, DNSRequestRecord
 from app.models.enums import RequestStatus
 from app.repositories.dns_request_repository import DNSRequestRepository
@@ -172,3 +174,94 @@ class DNSRequestService:
             "DNS request %s %sd by %s", dns_req.request_number, decision, approver.email
         )
         return dns_req
+
+    async def execute_in_micetro(self, request_id: str | UUID) -> DNSRequest:
+        """Push an APPROVED request's DNS changes to Micetro, then mark COMPLETED."""
+        dns_req = await self._repo.get_by_id(request_id)
+        if dns_req is None:
+            raise AppError("Request not found.")
+        if dns_req.status not in (RequestStatus.APPROVED, RequestStatus.FAILED):
+            raise AppError(
+                f"Cannot execute a request with status '{dns_req.status}'. "
+                "Only approved or failed requests can be executed."
+            )
+
+        dns_req.status = RequestStatus.IN_PROGRESS
+        await self._db.commit()
+
+        zone = dns_req.zone_name.strip().rstrip(".")
+
+        try:
+            for rec in dns_req.records:
+                fqdn = _make_fqdn(rec.label, zone)
+
+                if dns_req.action == "create":
+                    result = await dns_service.create_record(zone, {
+                        "name": fqdn,
+                        "type": rec.record_type,
+                        "data": rec.value,
+                        "ttl": rec.ttl,
+                        "enabled": True,
+                    })
+                    ref = (result.get("dnsRecord") or result).get("ref", "")
+                    if ref:
+                        rec.existing_micetro_ref = ref
+
+                elif dns_req.action in ("modify", "delete"):
+                    zone_records = await dns_service.get_zone_records(zone)
+                    matched = _find_record(zone_records, fqdn, rec.record_type)
+                    if not matched:
+                        raise AppError(
+                            f"Record '{fqdn}' (type {rec.record_type}) not found in Micetro zone '{zone}'."
+                        )
+                    record_ref = matched.get("ref", "")
+                    if dns_req.action == "modify":
+                        await dns_service.modify_record(record_ref, {
+                            "data": rec.value,
+                            "ttl": rec.ttl,
+                        })
+                    else:
+                        await dns_service.delete_record(record_ref)
+                    rec.existing_micetro_ref = record_ref
+
+            dns_req.status = RequestStatus.COMPLETED
+            dns_req.completed_at = datetime.now(tz=timezone.utc)
+            await self._db.commit()
+            await self._db.refresh(dns_req)
+            logger.info("DNS request %s executed in Micetro successfully.", dns_req.request_number)
+
+        except (AppError, MicetroError, Exception) as exc:
+            error_msg = exc.detail if hasattr(exc, "detail") else str(exc)
+            dns_req.status = RequestStatus.FAILED
+            if dns_req.notes:
+                dns_req.notes += f"\n[EXECUTION ERROR] {error_msg}"
+            else:
+                dns_req.notes = f"[EXECUTION ERROR] {error_msg}"
+            await self._db.commit()
+            await self._db.refresh(dns_req)
+            logger.error("DNS request %s execution failed: %s", dns_req.request_number, error_msg)
+            raise AppError(f"Micetro execution failed: {error_msg}") from exc
+
+        return dns_req
+
+
+# ── Module-level helpers ──────────────────────────────────────────────────────
+
+def _make_fqdn(label: str, zone: str) -> str:
+    """Return label.zone. — handles labels that are already FQDNs."""
+    label = label.strip().rstrip(".")
+    zone = zone.strip().rstrip(".")
+    if label.endswith(f".{zone}") or label == zone:
+        return f"{label}."
+    return f"{label}.{zone}."
+
+
+def _find_record(records: list[dict], fqdn: str, record_type: str) -> dict | None:
+    """Find the first record matching fqdn (with or without trailing dot) and type."""
+    fqdn_bare = fqdn.rstrip(".")
+    for r in records:
+        r_name = r.get("name", "").rstrip(".")
+        r_type = r.get("type", "")
+        if r_name == fqdn_bare and r_type.upper() == record_type.upper():
+            return r
+    return None
