@@ -51,10 +51,11 @@ def create_app() -> FastAPI:
     app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
     # ── Routers ───────────────────────────────────────────────────────────
-    from app.api.v1 import auth, dashboard, admin
+    from app.api.v1 import auth, dashboard, admin, dns_requests
 
     app.include_router(auth.router)
     app.include_router(dashboard.router)
+    app.include_router(dns_requests.router)
     app.include_router(admin.router)
 
     # ── Exception handlers ────────────────────────────────────────────────

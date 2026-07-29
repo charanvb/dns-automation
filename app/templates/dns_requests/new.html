@@ -1,0 +1,262 @@
+{% extends "base.html" %}
+{% block title %}New DNS Request{% endblock %}
+
+{% block content %}
+<div class="portal-page-header">
+  <div>
+    <h4 class="page-title">New DNS Change Request</h4>
+    <p class="page-subtitle text-muted">Submit a DNS record change for approval</p>
+  </div>
+  <a href="/dns-requests" class="btn btn-sm btn-outline-secondary">
+    <i class="bi bi-arrow-left me-1"></i>My Requests
+  </a>
+</div>
+
+<div class="px-4 pb-5">
+  {% if error %}
+  <div class="alert alert-danger d-flex align-items-center gap-2 mb-4" role="alert">
+    <i class="bi bi-exclamation-triangle-fill flex-shrink-0"></i>
+    <div>{{ error }}</div>
+  </div>
+  {% endif %}
+
+  <form method="post" action="/dns-requests" id="requestForm" novalidate>
+    {# Hidden flag — set by submit button JS #}
+    <input type="hidden" name="submit_for_approval" id="submitFlag" value="0">
+
+    {# ── Section 1: Request details ─────────────────────────────────────── #}
+    <div class="card border-0 shadow-sm mb-4">
+      <div class="card-header bg-transparent border-bottom py-3">
+        <h6 class="mb-0 fw-semibold">
+          <i class="bi bi-info-circle me-2 text-primary"></i>Request Details
+        </h6>
+      </div>
+      <div class="card-body p-4">
+        <div class="row g-3">
+
+          <div class="col-md-4">
+            <label class="form-label fw-medium">Action <span class="text-danger">*</span></label>
+            <select name="action" class="form-select" required>
+              <option value="create" {% if form.get('action','create') == 'create' %}selected{% endif %}>
+                Create — Add new record(s)
+              </option>
+              <option value="modify" {% if form.get('action') == 'modify' %}selected{% endif %}>
+                Modify — Update existing record(s)
+              </option>
+              <option value="delete" {% if form.get('action') == 'delete' %}selected{% endif %}>
+                Delete — Remove record(s)
+              </option>
+            </select>
+          </div>
+
+          <div class="col-md-4">
+            <label class="form-label fw-medium">DNS Zone <span class="text-danger">*</span></label>
+            <input type="text" name="zone_name" class="form-control"
+                   placeholder="e.g. unilever.com"
+                   value="{{ form.get('zone_name', '') }}"
+                   required autocomplete="off">
+            <div class="form-text">Enter the zone name without trailing dot.</div>
+          </div>
+
+          <div class="col-md-4">
+            <label class="form-label fw-medium">Change Ticket</label>
+            <input type="text" name="change_ticket" class="form-control"
+                   placeholder="e.g. CHG0012345"
+                   value="{{ form.get('change_ticket', '') }}"
+                   autocomplete="off">
+            <div class="form-text">ServiceNow / JIRA ticket reference (optional).</div>
+          </div>
+
+          <div class="col-12">
+            <label class="form-label fw-medium">Business Justification <span class="text-danger">*</span></label>
+            <textarea name="business_justification" class="form-control" rows="3"
+                      placeholder="Describe why this DNS change is needed…"
+                      required>{{ form.get('business_justification', '') }}</textarea>
+          </div>
+
+          <div class="col-12">
+            <label class="form-label fw-medium">Notes <span class="text-muted small">(optional)</span></label>
+            <textarea name="notes" class="form-control" rows="2"
+                      placeholder="Any additional context for the approver…">{{ form.get('notes', '') }}</textarea>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    {# ── Section 2: DNS Records ──────────────────────────────────────────── #}
+    <div class="card border-0 shadow-sm mb-4">
+      <div class="card-header bg-transparent border-bottom py-3 d-flex justify-content-between align-items-center">
+        <h6 class="mb-0 fw-semibold">
+          <i class="bi bi-table me-2 text-primary"></i>DNS Records
+          <span class="text-muted fw-normal small ms-1">— add one or more records below</span>
+        </h6>
+        <button type="button" class="btn btn-sm btn-outline-primary" onclick="addRow()">
+          <i class="bi bi-plus-lg me-1"></i>Add Row
+        </button>
+      </div>
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-bordered table-sm mb-0" id="recordsTable">
+            <thead class="table-light">
+              <tr>
+                <th style="width:26%" class="ps-3">Label / Hostname <span class="text-danger">*</span></th>
+                <th style="width:12%">Type</th>
+                <th style="width:9%">TTL (sec)</th>
+                <th>Value / RDATA <span class="text-danger">*</span></th>
+                <th style="width:48px"></th>
+              </tr>
+            </thead>
+            <tbody id="recordsBody">
+              {# Initial row — always shown #}
+              <tr class="record-row">
+                <td class="ps-3">
+                  <input type="text" name="record_label" class="form-control form-control-sm"
+                         placeholder="host.example.com" autocomplete="off">
+                </td>
+                <td>
+                  <select name="record_type" class="form-select form-select-sm">
+                    {% for rt in record_types %}
+                    <option value="{{ rt }}">{{ rt }}</option>
+                    {% endfor %}
+                  </select>
+                </td>
+                <td>
+                  <input type="number" name="record_ttl" class="form-control form-control-sm"
+                         value="300" min="60" max="86400">
+                </td>
+                <td>
+                  <input type="text" name="record_value" class="form-control form-control-sm"
+                         placeholder="e.g. 10.1.2.3" autocomplete="off">
+                </td>
+                <td class="text-center">
+                  <button type="button" class="btn btn-sm btn-link text-danger p-0 remove-row-btn"
+                          onclick="removeRow(this)" title="Remove row">
+                    <i class="bi bi-trash3"></i>
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        {# Row template (hidden, cloned by JS) #}
+        <template id="rowTemplate">
+          <tr class="record-row">
+            <td class="ps-3">
+              <input type="text" name="record_label" class="form-control form-control-sm"
+                     placeholder="host.example.com" autocomplete="off">
+            </td>
+            <td>
+              <select name="record_type" class="form-select form-select-sm">
+                {% for rt in record_types %}
+                <option value="{{ rt }}">{{ rt }}</option>
+                {% endfor %}
+              </select>
+            </td>
+            <td>
+              <input type="number" name="record_ttl" class="form-control form-control-sm"
+                     value="300" min="60" max="86400">
+            </td>
+            <td>
+              <input type="text" name="record_value" class="form-control form-control-sm"
+                     placeholder="e.g. 10.1.2.3" autocomplete="off">
+            </td>
+            <td class="text-center">
+              <button type="button" class="btn btn-sm btn-link text-danger p-0 remove-row-btn"
+                      onclick="removeRow(this)" title="Remove row">
+                <i class="bi bi-trash3"></i>
+              </button>
+            </td>
+          </tr>
+        </template>
+
+        <div class="px-3 py-2 border-top bg-light-subtle text-muted small">
+          <i class="bi bi-info-circle me-1"></i>
+          <strong>MX:</strong> value format is <code>priority hostname</code> (e.g. <code>10 mail.example.com</code>) &nbsp;|&nbsp;
+          <strong>SRV:</strong> <code>priority weight port target</code>
+        </div>
+      </div>
+    </div>
+
+    {# ── Actions ────────────────────────────────────────────────────────── #}
+    <div class="d-flex gap-2 justify-content-end">
+      <a href="/dns-requests" class="btn btn-outline-secondary">Cancel</a>
+      <button type="button" class="btn btn-outline-primary" onclick="saveDraft()">
+        <i class="bi bi-floppy me-1"></i>Save as Draft
+      </button>
+      <button type="button" class="btn btn-primary" onclick="submitForApproval()">
+        <i class="bi bi-send me-1"></i>Submit for Approval
+      </button>
+    </div>
+
+  </form>
+</div>
+{% endblock %}
+
+{% block head_extra %}
+<style>
+  .portal-page-header { padding: 1.5rem 1.5rem 1rem; display: flex; align-items: flex-start; justify-content: space-between; }
+  .page-title  { font-size: 1.15rem; font-weight: 600; margin: 0; }
+  .page-subtitle { font-size: 0.82rem; margin: 0; }
+  #recordsTable td { vertical-align: middle; padding: 0.35rem 0.5rem; }
+  #recordsTable th { padding: 0.5rem 0.5rem; font-size: 0.78rem; text-transform: uppercase; letter-spacing: .04em; color: #555; }
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  function addRow() {
+    const tmpl = document.getElementById('rowTemplate');
+    const clone = tmpl.content.cloneNode(true);
+    document.getElementById('recordsBody').appendChild(clone);
+    // Focus the label field of the new row
+    const rows = document.querySelectorAll('.record-row');
+    const last = rows[rows.length - 1];
+    last.querySelector('input[name="record_label"]').focus();
+    updateRemoveButtons();
+  }
+
+  function removeRow(btn) {
+    const rows = document.querySelectorAll('.record-row');
+    if (rows.length <= 1) return; // always keep at least one row
+    btn.closest('tr').remove();
+    updateRemoveButtons();
+  }
+
+  function updateRemoveButtons() {
+    const rows = document.querySelectorAll('.record-row');
+    rows.forEach(row => {
+      const btn = row.querySelector('.remove-row-btn');
+      btn.disabled = rows.length <= 1;
+    });
+  }
+
+  function saveDraft() {
+    document.getElementById('submitFlag').value = '0';
+    document.getElementById('requestForm').submit();
+  }
+
+  function submitForApproval() {
+    // Basic client-side check
+    const zone = document.querySelector('[name="zone_name"]').value.trim();
+    const biz  = document.querySelector('[name="business_justification"]').value.trim();
+    if (!zone || !biz) {
+      alert('Please fill in Zone Name and Business Justification before submitting.');
+      return;
+    }
+    const labels = [...document.querySelectorAll('[name="record_label"]')].map(i => i.value.trim());
+    const values = [...document.querySelectorAll('[name="record_value"]')].map(i => i.value.trim());
+    const hasRecord = labels.some((l, idx) => l || values[idx]);
+    if (!hasRecord) {
+      alert('Please add at least one DNS record.');
+      return;
+    }
+    if (!confirm('Submit this request for approval? You will not be able to edit it once submitted.')) return;
+    document.getElementById('submitFlag').value = '1';
+    document.getElementById('requestForm').submit();
+  }
+
+  updateRemoveButtons();
+</script>
+{% endblock %}

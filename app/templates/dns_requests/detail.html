@@ -1,0 +1,196 @@
+{% extends "base.html" %}
+{% block title %}{{ dns_request.request_number }}{% endblock %}
+
+{% block content %}
+{% set req = dns_request %}
+<div class="portal-page-header">
+  <div>
+    <h4 class="page-title">
+      {{ req.request_number }}
+      <span class="ms-2">{% include "partials/status_badge.html" %}</span>
+    </h4>
+    <p class="page-subtitle text-muted">
+      {{ req.action | title }} · {{ req.zone_name }}
+      · Submitted by {{ req.requester.full_name if req.requester else '—' }}
+    </p>
+  </div>
+  <a href="/dns-requests" class="btn btn-sm btn-outline-secondary">
+    <i class="bi bi-arrow-left me-1"></i>Back to list
+  </a>
+</div>
+
+<div class="px-4 pb-5">
+  <div class="row g-4">
+
+    {# ── Left column ──────────────────────────────────────────────────── #}
+    <div class="col-lg-8">
+
+      {# DNS Records #}
+      <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-transparent border-bottom py-3">
+          <h6 class="mb-0 fw-semibold">
+            <i class="bi bi-table me-2 text-primary"></i>DNS Records
+          </h6>
+        </div>
+        <div class="table-responsive">
+          <table class="table table-bordered table-sm mb-0">
+            <thead class="table-light">
+              <tr>
+                <th class="ps-3">Label / Hostname</th>
+                <th style="width:80px">Type</th>
+                <th style="width:90px">TTL</th>
+                <th>Value / RDATA</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for record in req.records %}
+              <tr>
+                <td class="ps-3 font-monospace">{{ record.label }}</td>
+                <td>
+                  <span class="badge bg-primary-subtle text-primary">{{ record.record_type }}</span>
+                </td>
+                <td class="text-muted">{{ record.ttl }}s</td>
+                <td class="font-monospace text-break">{{ record.value }}</td>
+              </tr>
+              {% else %}
+              <tr>
+                <td colspan="4" class="text-center text-muted py-3">No records attached.</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {# Business justification #}
+      <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-transparent border-bottom py-3">
+          <h6 class="mb-0 fw-semibold">
+            <i class="bi bi-chat-left-text me-2 text-primary"></i>Justification &amp; Notes
+          </h6>
+        </div>
+        <div class="card-body">
+          <p class="mb-1 fw-medium small text-muted text-uppercase">Business Justification</p>
+          <p class="mb-3">{{ req.business_justification }}</p>
+          {% if req.notes %}
+          <p class="mb-1 fw-medium small text-muted text-uppercase">Notes</p>
+          <p class="mb-0 text-muted">{{ req.notes }}</p>
+          {% endif %}
+        </div>
+      </div>
+
+      {# Approval history #}
+      {% if req.approvals %}
+      <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-transparent border-bottom py-3">
+          <h6 class="mb-0 fw-semibold">
+            <i class="bi bi-check2-circle me-2 text-primary"></i>Approval History
+          </h6>
+        </div>
+        <div class="card-body p-0">
+          <ul class="list-group list-group-flush">
+            {% for ap in req.approvals %}
+            <li class="list-group-item">
+              <div class="d-flex justify-content-between align-items-start">
+                <div>
+                  <span class="fw-semibold">
+                    {% if ap.action == 'approved' %}
+                      <i class="bi bi-check-circle-fill text-success me-1"></i>Approved
+                    {% elif ap.action == 'rejected' %}
+                      <i class="bi bi-x-circle-fill text-danger me-1"></i>Rejected
+                    {% else %}
+                      <i class="bi bi-info-circle-fill text-info me-1"></i>Info Requested
+                    {% endif %}
+                  </span>
+                  {% if ap.comments %}
+                  <p class="mb-0 text-muted small mt-1">{{ ap.comments }}</p>
+                  {% endif %}
+                </div>
+                <small class="text-muted">{{ ap.acted_at.strftime('%d %b %Y %H:%M') if ap.acted_at else '—' }}</small>
+              </div>
+            </li>
+            {% endfor %}
+          </ul>
+        </div>
+      </div>
+      {% endif %}
+
+    </div>
+
+    {# ── Right column: metadata ───────────────────────────────────────── #}
+    <div class="col-lg-4">
+      <div class="card border-0 shadow-sm">
+        <div class="card-header bg-transparent border-bottom py-3">
+          <h6 class="mb-0 fw-semibold">Details</h6>
+        </div>
+        <div class="card-body">
+          <dl class="row mb-0 small">
+
+            <dt class="col-5 text-muted">Request #</dt>
+            <dd class="col-7 fw-semibold">{{ req.request_number }}</dd>
+
+            <dt class="col-5 text-muted">Status</dt>
+            <dd class="col-7">{% include "partials/status_badge.html" %}</dd>
+
+            <dt class="col-5 text-muted">Action</dt>
+            <dd class="col-7 text-capitalize">{{ req.action }}</dd>
+
+            <dt class="col-5 text-muted">Zone</dt>
+            <dd class="col-7 font-monospace">{{ req.zone_name }}</dd>
+
+            {% if req.change_ticket %}
+            <dt class="col-5 text-muted">Change Ticket</dt>
+            <dd class="col-7">{{ req.change_ticket }}</dd>
+            {% endif %}
+
+            <dt class="col-5 text-muted">Requester</dt>
+            <dd class="col-7">{{ req.requester.full_name if req.requester else '—' }}</dd>
+
+            <dt class="col-5 text-muted">Created</dt>
+            <dd class="col-7">{{ req.created_at.strftime('%d %b %Y %H:%M') }}</dd>
+
+            {% if req.submitted_at %}
+            <dt class="col-5 text-muted">Submitted</dt>
+            <dd class="col-7">{{ req.submitted_at.strftime('%d %b %Y %H:%M') }}</dd>
+            {% endif %}
+
+            {% if req.completed_at %}
+            <dt class="col-5 text-muted">Completed</dt>
+            <dd class="col-7">{{ req.completed_at.strftime('%d %b %Y %H:%M') }}</dd>
+            {% endif %}
+
+            {% if req.micetro_ref %}
+            <dt class="col-5 text-muted">Micetro Ref</dt>
+            <dd class="col-7 font-monospace small">{{ req.micetro_ref }}</dd>
+            {% endif %}
+
+          </dl>
+
+          {# Submit draft action #}
+          {% if req.status == 'draft' and (current_user.is_admin or str(req.requester_id) == str(current_user.id)) %}
+          <hr>
+          <form method="post" action="/dns-requests/{{ req.id }}/submit">
+            <button type="submit" class="btn btn-primary w-100"
+                    onclick="return confirm('Submit this draft for approval?')">
+              <i class="bi bi-send me-1"></i>Submit for Approval
+            </button>
+          </form>
+          {% endif %}
+
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+{% endblock %}
+
+{% block head_extra %}
+<style>
+  .portal-page-header { padding: 1.5rem 1.5rem 1rem; display: flex; align-items: flex-start; justify-content: space-between; }
+  .page-title  { font-size: 1.15rem; font-weight: 600; margin: 0; }
+  .page-subtitle { font-size: 0.82rem; margin: 0; }
+  dt { font-weight: 500; }
+  dd { margin-bottom: 0.5rem; }
+</style>
+{% endblock %}
