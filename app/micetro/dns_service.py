@@ -21,7 +21,7 @@ class MicetroDNSService:
         """Search DNS zones by name fragment."""
         params: dict = {"limit": limit}
         if query:
-            params["filter"] = f"name contains {query}"
+            params["filter"] = f"name=*{query}*"
         result = await micetro_client.get("/dnsZones", params=params)
         return result.get("result", {}).get("dnsZones", [])
 
@@ -66,14 +66,16 @@ class MicetroDNSService:
         return result.get("result", {}).get("dnsRecords", [])
 
     async def create_record(self, zone_ref: str, record: dict) -> dict:
-        """Create a DNS record in Micetro. ``record`` must follow Micetro schema."""
-        result = await micetro_client.post(f"/dnsZones/{zone_ref}/dnsRecords", record)
+        """Create a DNS record in Micetro. ``record`` fields go into the dnsRecord envelope."""
+        body = {"dnsRecord": record, "saveComment": ""}
+        result = await micetro_client.post(f"/dnsZones/{zone_ref}/dnsRecords", body)
         return result.get("result", {})
 
     async def modify_record(self, record_ref: str, record: dict) -> dict:
         """Modify an existing DNS record by its Micetro ref."""
         ref_id = record_ref.split("/")[-1]
-        result = await micetro_client.put(f"/dnsRecords/{ref_id}", record)
+        body = {"dnsRecord": record, "saveComment": ""}
+        result = await micetro_client.put(f"/dnsRecords/{ref_id}", body)
         return result.get("result", {})
 
     async def delete_record(self, record_ref: str) -> None:

@@ -203,13 +203,15 @@ class DNSRequestService:
                         "ttl": rec.ttl,
                         "enabled": True,
                     })
-                    ref = (result.get("dnsRecord") or result).get("ref", "")
+                    # result is result["result"]; created record is nested under dnsRecord
+                    record_obj = result.get("dnsRecord") or result
+                    ref = record_obj.get("ref", "")
                     if ref:
                         rec.existing_micetro_ref = ref
 
                 elif dns_req.action in ("modify", "delete"):
                     zone_records = await dns_service.get_zone_records(zone)
-                    matched = _find_record(zone_records, fqdn, rec.record_type)
+                    matched = _find_record(zone_records, fqdn, rec.record_type, zone)
                     if not matched:
                         raise AppError(
                             f"Record '{fqdn}' (type {rec.record_type}) not found in Micetro zone '{zone}'."
@@ -256,12 +258,21 @@ def _make_fqdn(label: str, zone: str) -> str:
     return f"{label}.{zone}."
 
 
-def _find_record(records: list[dict], fqdn: str, record_type: str) -> dict | None:
-    """Find the first record matching fqdn (with or without trailing dot) and type."""
+def _find_record(records: list[dict], fqdn: str, record_type: str, zone: str = "") -> dict | None:
+    """Find a record matching fqdn and type; handles both relative and FQDN names."""
     fqdn_bare = fqdn.rstrip(".")
+    zone_bare = zone.rstrip(".")
+    # derive the relative label by stripping the zone suffix
+    if zone_bare and fqdn_bare.endswith(f".{zone_bare}"):
+        label = fqdn_bare[: -(len(zone_bare) + 1)]
+    else:
+        label = fqdn_bare
+
     for r in records:
         r_name = r.get("name", "").rstrip(".")
         r_type = r.get("type", "")
-        if r_name == fqdn_bare and r_type.upper() == record_type.upper():
+        if r_type.upper() != record_type.upper():
+            continue
+        if r_name in (fqdn_bare, label):
             return r
     return None
