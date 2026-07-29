@@ -81,6 +81,8 @@ class User(Base):
     roles: Mapped[list["Role"]] = relationship(  # type: ignore[name-defined]
         "Role",
         secondary=user_roles_table,
+        # user_roles has two FKs to users (user_id + assigned_by); be explicit
+        primaryjoin=lambda: User.id == user_roles_table.c.user_id,
         back_populates="users",
         lazy="selectin",
     )

@@ -9,7 +9,7 @@ from sqlalchemy.sql import func
 from sqlalchemy import DateTime, String
 
 from app.database.base import Base
-from app.models.user import user_roles_table
+from app.models.user import User, user_roles_table
 
 
 class Role(Base):
@@ -27,6 +27,8 @@ class Role(Base):
     users: Mapped[list["User"]] = relationship(  # type: ignore[name-defined]
         "User",
         secondary=user_roles_table,
+        # mirror of User.roles: explicit secondaryjoin to avoid assigned_by ambiguity
+        secondaryjoin=lambda: User.id == user_roles_table.c.user_id,
         back_populates="roles",
     )
 
