@@ -1,0 +1,17 @@
+version: "3.9"
+
+services:
+  app:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: dns-portal-app
+    restart: unless-stopped
+    ports:
+      - "8000:8000"       # access via http://<VM-IP>:8000
+    env_file:
+      - ../.env
+
+networks:
+  default:
+    driver: bridge

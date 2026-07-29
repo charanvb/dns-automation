@@ -1,0 +1,20 @@
+{# Renders a coloured status badge for req.status #}
+{% if req.status == 'pending_approval' %}
+  <span class="badge bg-warning-subtle text-warning border border-warning-subtle">Pending Approval</span>
+{% elif req.status == 'approved' %}
+  <span class="badge bg-info-subtle text-info border border-info-subtle">Approved</span>
+{% elif req.status == 'in_progress' %}
+  <span class="badge bg-primary-subtle text-primary border border-primary-subtle">In Progress</span>
+{% elif req.status == 'completed' %}
+  <span class="badge bg-success-subtle text-success border border-success-subtle">Completed</span>
+{% elif req.status == 'rejected' %}
+  <span class="badge bg-danger-subtle text-danger border border-danger-subtle">Rejected</span>
+{% elif req.status == 'cancelled' %}
+  <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle">Cancelled</span>
+{% elif req.status == 'failed' %}
+  <span class="badge bg-danger-subtle text-danger border border-danger-subtle">Failed</span>
+{% elif req.status == 'draft' %}
+  <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle">Draft</span>
+{% else %}
+  <span class="badge bg-light text-dark border">{{ req.status | replace('_', ' ') | title }}</span>
+{% endif %}

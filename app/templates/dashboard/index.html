@@ -1,0 +1,209 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="portal-page-header">
+  <div>
+    <h4 class="page-title">Dashboard</h4>
+    <p class="page-subtitle text-muted">Welcome back, {{ current_user.full_name }}</p>
+  </div>
+  {% if current_user.is_whitelisted or current_user.is_admin %}
+  <a href="/dns-requests/new" class="btn btn-primary">
+    <i class="bi bi-plus-lg me-1"></i>New DNS Request
+  </a>
+  {% endif %}
+</div>
+
+{# ── Status overview cards ─────────────────────────────────────────────────── #}
+<div class="row g-3 px-4 mb-4">
+  <div class="col-sm-6 col-xl-3">
+    <div class="stat-card card h-100 border-0 shadow-sm">
+      <div class="card-body d-flex align-items-center gap-3">
+        <div class="stat-icon bg-warning-subtle text-warning">
+          <i class="bi bi-hourglass-split"></i>
+        </div>
+        <div>
+          <div class="stat-value">{{ status_counts.get('pending_approval', 0) }}</div>
+          <div class="stat-label text-muted">Pending Approval</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-xl-3">
+    <div class="stat-card card h-100 border-0 shadow-sm">
+      <div class="card-body d-flex align-items-center gap-3">
+        <div class="stat-icon bg-success-subtle text-success">
+          <i class="bi bi-check2-circle"></i>
+        </div>
+        <div>
+          <div class="stat-value">{{ status_counts.get('completed', 0) }}</div>
+          <div class="stat-label text-muted">Completed</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-xl-3">
+    <div class="stat-card card h-100 border-0 shadow-sm">
+      <div class="card-body d-flex align-items-center gap-3">
+        <div class="stat-icon bg-danger-subtle text-danger">
+          <i class="bi bi-x-circle"></i>
+        </div>
+        <div>
+          <div class="stat-value">{{ status_counts.get('rejected', 0) }}</div>
+          <div class="stat-label text-muted">Rejected</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-xl-3">
+    <div class="stat-card card h-100 border-0 shadow-sm">
+      <div class="card-body d-flex align-items-center gap-3">
+        <div class="stat-icon bg-primary-subtle text-primary">
+          <i class="bi bi-gear-wide-connected"></i>
+        </div>
+        <div>
+          <div class="stat-value">{{ status_counts.get('in_progress', 0) }}</div>
+          <div class="stat-label text-muted">In Progress</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3 px-4">
+
+  {# ── My recent requests ─────────────────────────────────────────────────── #}
+  <div class="col-lg-8">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-header bg-transparent border-bottom d-flex justify-content-between align-items-center py-3">
+        <h6 class="mb-0 fw-semibold">My Recent Requests</h6>
+        <a href="/dns-requests" class="btn btn-sm btn-outline-secondary">View all</a>
+      </div>
+      <div class="card-body p-0">
+        {% if my_recent_requests %}
+        <div class="table-responsive">
+          <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+              <tr>
+                <th class="px-4 py-3 small fw-semibold text-muted">REQUEST #</th>
+                <th class="py-3 small fw-semibold text-muted">ZONE</th>
+                <th class="py-3 small fw-semibold text-muted">ACTION</th>
+                <th class="py-3 small fw-semibold text-muted">STATUS</th>
+                <th class="py-3 small fw-semibold text-muted">DATE</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for req in my_recent_requests %}
+              <tr class="cursor-pointer" onclick="window.location='/dns-requests/{{ req.id }}'">
+                <td class="px-4 py-3">
+                  <a href="/dns-requests/{{ req.id }}" class="fw-medium text-decoration-none">
+                    {{ req.request_number }}
+                  </a>
+                </td>
+                <td class="py-3 text-muted small">{{ req.zone_name }}</td>
+                <td class="py-3">
+                  <span class="badge rounded-pill
+                    {% if req.action == 'create' %}bg-success-subtle text-success border border-success-subtle
+                    {% elif req.action == 'modify' %}bg-warning-subtle text-warning border border-warning-subtle
+                    {% else %}bg-danger-subtle text-danger border border-danger-subtle{% endif %}">
+                    {{ req.action | capitalize }}
+                  </span>
+                </td>
+                <td class="py-3">
+                  {% include "partials/status_badge.html" %}
+                </td>
+                <td class="py-3 text-muted small">
+                  {{ req.created_at.strftime('%d %b %Y') }}
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <div class="text-center py-5 text-muted">
+          <i class="bi bi-inbox fs-1 d-block mb-2 opacity-25"></i>
+          <p class="mb-0">No requests yet.</p>
+          {% if current_user.is_whitelisted or current_user.is_admin %}
+          <a href="/dns-requests/new" class="btn btn-sm btn-primary mt-3">
+            Create your first request
+          </a>
+          {% else %}
+          <p class="small mt-2">Contact an administrator to enable DNS request access.</p>
+          {% endif %}
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  {# ── Admin panels (visible to admins only) ─────────────────────────────── #}
+  {% if current_user.is_admin %}
+  <div class="col-lg-4">
+    <div class="card border-0 shadow-sm mb-3">
+      <div class="card-header bg-transparent border-bottom py-3 d-flex justify-content-between align-items-center">
+        <h6 class="mb-0 fw-semibold">Pending Activations</h6>
+        {% if pending_users %}
+        <span class="badge bg-warning text-dark">{{ pending_users | length }}</span>
+        {% endif %}
+      </div>
+      <div class="card-body p-0">
+        {% if pending_users %}
+          {% for user in pending_users[:5] %}
+          <div class="d-flex align-items-center px-3 py-2 border-bottom">
+            <div class="avatar-sm me-3">
+              {{ user.full_name[0] | upper }}
+            </div>
+            <div class="flex-grow-1 min-width-0">
+              <div class="fw-medium small text-truncate">{{ user.full_name }}</div>
+              <div class="text-muted x-small text-truncate">{{ user.email }}</div>
+            </div>
+            <form method="post" action="/admin/users/{{ user.id }}/activate" class="ms-2">
+              <button type="submit" class="btn btn-sm btn-outline-success py-0 px-2">
+                Activate
+              </button>
+            </form>
+          </div>
+          {% endfor %}
+          {% if pending_users | length > 5 %}
+          <div class="text-center py-2">
+            <a href="/admin/users" class="small text-primary">
+              +{{ pending_users | length - 5 }} more
+            </a>
+          </div>
+          {% endif %}
+        {% else %}
+        <div class="text-center py-4 text-muted small">
+          <i class="bi bi-check-circle-fill text-success d-block fs-4 mb-1"></i>
+          All users activated
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="card border-0 shadow-sm">
+      <div class="card-header bg-transparent border-bottom py-3 d-flex justify-content-between align-items-center">
+        <h6 class="mb-0 fw-semibold">Approval Queue</h6>
+        {% if pending_approval_count %}
+        <span class="badge bg-warning text-dark">{{ pending_approval_count }}</span>
+        {% endif %}
+      </div>
+      <div class="card-body text-center py-4">
+        {% if pending_approval_count > 0 %}
+        <p class="text-muted small mb-3">
+          <strong>{{ pending_approval_count }}</strong> request{{ 's' if pending_approval_count > 1 }} awaiting review
+        </p>
+        <a href="/admin/approvals" class="btn btn-sm btn-warning">
+          <i class="bi bi-check2-circle me-1"></i>Review Requests
+        </a>
+        {% else %}
+        <i class="bi bi-inbox text-muted fs-3 d-block mb-2 opacity-25"></i>
+        <p class="text-muted small mb-0">Queue is empty</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}

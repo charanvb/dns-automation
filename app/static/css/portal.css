@@ -1,0 +1,264 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   Unilever Cloud Operations Portal — Custom CSS
+   Design language: Microsoft Azure Portal inspired
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Design tokens ────────────────────────────────────────────────────────── */
+:root {
+  --portal-header-bg:   #1e2035;
+  --portal-header-h:    56px;
+  --portal-sidebar-bg:  #2d3053;
+  --portal-sidebar-w:   220px;
+  --portal-bg:          #f3f4f8;
+  --portal-card-bg:     #ffffff;
+
+  --primary:            #0078d4;
+  --primary-hover:      #106ebe;
+  --primary-subtle:     #dce9f7;
+
+  --text-primary:       #1b1b1b;
+  --text-secondary:     #6e6e6e;
+  --text-header:        #e8ecf2;
+  --text-header-muted:  #a0abbe;
+
+  --border-color:       #e1e4eb;
+  --sidebar-link-hover: rgba(255,255,255,0.08);
+  --sidebar-link-active:#0078d4;
+
+  --font-sans: "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+/* ── Base ─────────────────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body {
+  height: 100%;
+  font-family: var(--font-sans);
+  font-size: 14px;
+  color: var(--text-primary);
+  background: var(--portal-bg);
+}
+
+/* ── Top header ───────────────────────────────────────────────────────────── */
+.portal-header {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  height: var(--portal-header-h);
+  background: var(--portal-header-bg);
+  color: var(--text-header);
+  z-index: 1030;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.4);
+}
+
+.portal-brand {
+  color: var(--text-header) !important;
+  font-size: 15px;
+}
+
+.portal-header-divider {
+  opacity: 0.3;
+}
+
+.text-header-muted { color: var(--text-header-muted); }
+.text-primary-300  { color: #6cb8f6; }
+
+.btn-outline-secondary-light {
+  color: var(--text-header-muted);
+  border-color: rgba(255,255,255,0.2);
+  font-size: 13px;
+}
+.btn-outline-secondary-light:hover {
+  color: #fff;
+  background: rgba(255,255,255,0.1);
+  border-color: rgba(255,255,255,0.35);
+}
+
+/* ── Layout ───────────────────────────────────────────────────────────────── */
+.portal-layout {
+  display: flex;
+  min-height: 100vh;
+  padding-top: var(--portal-header-h);
+}
+
+/* ── Sidebar ──────────────────────────────────────────────────────────────── */
+.portal-sidebar {
+  position: fixed;
+  top: var(--portal-header-h);
+  left: 0;
+  bottom: 0;
+  width: var(--portal-sidebar-w);
+  background: var(--portal-sidebar-bg);
+  overflow-y: auto;
+  padding: 12px 0;
+  z-index: 1020;
+}
+
+.sidebar-section-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: rgba(255,255,255,0.35);
+  padding: 8px 16px 4px;
+}
+
+.sidebar-link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 16px;
+  color: rgba(255,255,255,0.75);
+  text-decoration: none;
+  font-size: 13.5px;
+  border-left: 3px solid transparent;
+  transition: background 0.15s, color 0.15s;
+}
+
+.sidebar-link i {
+  font-size: 16px;
+  flex-shrink: 0;
+  width: 20px;
+  text-align: center;
+}
+
+.sidebar-link:hover {
+  background: var(--sidebar-link-hover);
+  color: #fff;
+}
+
+.sidebar-link.active {
+  background: rgba(0,120,212,0.2);
+  border-left-color: var(--primary);
+  color: #fff;
+  font-weight: 500;
+}
+
+/* ── Main content ─────────────────────────────────────────────────────────── */
+.portal-main {
+  flex: 1;
+  margin-left: var(--portal-sidebar-w);
+  min-width: 0;
+  padding-bottom: 40px;
+}
+
+.portal-page-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 24px 24px 16px;
+  border-bottom: 1px solid var(--border-color);
+  background: #fff;
+  margin-bottom: 20px;
+}
+
+.page-title {
+  font-size: 20px;
+  font-weight: 600;
+  margin: 0;
+  color: var(--text-primary);
+}
+
+.page-subtitle {
+  font-size: 13px;
+  margin: 2px 0 0;
+}
+
+/* ── Stat cards ───────────────────────────────────────────────────────────── */
+.stat-card {
+  border-radius: 8px;
+}
+
+.stat-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.stat-value {
+  font-size: 26px;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--text-primary);
+}
+
+.stat-label {
+  font-size: 12px;
+  margin-top: 2px;
+}
+
+/* ── Auth pages ───────────────────────────────────────────────────────────── */
+.auth-page {
+  background: linear-gradient(135deg, #1e2035 0%, #2d3053 100%);
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.auth-container {
+  width: 100%;
+  max-width: 400px;
+  padding: 16px;
+}
+
+.auth-card {
+  border-radius: 10px;
+  border: none;
+  overflow: hidden;
+}
+
+.auth-card-header {
+  background: var(--portal-header-bg);
+  color: #fff;
+  padding: 24px;
+  text-align: center;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+
+.auth-card-header h4 { color: #fff; }
+
+/* ── Avatar ───────────────────────────────────────────────────────────────── */
+.avatar-sm {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--primary);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+/* ── Misc helpers ─────────────────────────────────────────────────────────── */
+.x-small { font-size: 11px; }
+.cursor-pointer { cursor: pointer; }
+.min-width-0 { min-width: 0; }
+
+/* ── Table ────────────────────────────────────────────────────────────────── */
+.table thead th {
+  font-size: 11px;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+}
+
+/* ── Scrollbar (webkit) ───────────────────────────────────────────────────── */
+.portal-sidebar::-webkit-scrollbar { width: 4px; }
+.portal-sidebar::-webkit-scrollbar-track { background: transparent; }
+.portal-sidebar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 4px; }
+
+/* ── Pages without sidebar (auth) ────────────────────────────────────────── */
+body.auth-page .portal-sidebar,
+body.auth-page .portal-header { display: none; }
+
+/* ── Responsive ───────────────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .portal-sidebar { transform: translateX(-100%); transition: transform 0.25s; }
+  .portal-main { margin-left: 0; }
+}

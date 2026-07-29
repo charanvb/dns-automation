@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% block title %}User Management{% endblock %}
+
+{% block content %}
+<div class="portal-page-header">
+  <div>
+    <h4 class="page-title">User Management</h4>
+    <p class="page-subtitle text-muted">Manage portal user accounts and permissions</p>
+  </div>
+</div>
+
+<div class="px-4">
+  <div class="card border-0 shadow-sm">
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+          <thead class="table-light">
+            <tr>
+              <th class="px-4 py-3 small fw-semibold text-muted">USER</th>
+              <th class="py-3 small fw-semibold text-muted">DEPARTMENT</th>
+              <th class="py-3 small fw-semibold text-muted">ROLES</th>
+              <th class="py-3 small fw-semibold text-muted">STATUS</th>
+              <th class="py-3 small fw-semibold text-muted">DNS ACCESS</th>
+              <th class="py-3 small fw-semibold text-muted">JOINED</th>
+              <th class="py-3 small fw-semibold text-muted">ACTIONS</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for user in users %}
+            <tr>
+              <td class="px-4 py-3">
+                <div class="fw-medium">{{ user.full_name }}</div>
+                <div class="text-muted small">{{ user.email }}</div>
+              </td>
+              <td class="py-3 text-muted small">{{ user.department or '—' }}</td>
+              <td class="py-3">
+                {% for role in user.role_names %}
+                <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle me-1">
+                  {{ role }}
+                </span>
+                {% endfor %}
+              </td>
+              <td class="py-3">
+                {% if user.is_active %}
+                <span class="badge bg-success-subtle text-success border border-success-subtle">Active</span>
+                {% else %}
+                <span class="badge bg-warning-subtle text-warning border border-warning-subtle">Pending</span>
+                {% endif %}
+              </td>
+              <td class="py-3">
+                {% if user.is_whitelisted %}
+                <span class="badge bg-success-subtle text-success border border-success-subtle">
+                  <i class="bi bi-check2 me-1"></i>Enabled
+                </span>
+                {% else %}
+                <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle">
+                  Disabled
+                </span>
+                {% endif %}
+              </td>
+              <td class="py-3 text-muted small">{{ user.created_at.strftime('%d %b %Y') }}</td>
+              <td class="py-3">
+                <div class="d-flex gap-1 flex-wrap">
+                  {% if not user.is_active %}
+                  <form method="post" action="/admin/users/{{ user.id }}/activate">
+                    <button class="btn btn-sm btn-outline-success">Activate</button>
+                  </form>
+                  {% else %}
+                  <form method="post" action="/admin/users/{{ user.id }}/deactivate"
+                        onsubmit="return confirm('Deactivate {{ user.full_name }}?')">
+                    <button class="btn btn-sm btn-outline-warning">Deactivate</button>
+                  </form>
+                  {% endif %}
+
+                  {% if user.is_active and not user.is_whitelisted %}
+                  <form method="post" action="/admin/users/{{ user.id }}/whitelist">
+                    <input type="hidden" name="whitelisted" value="true" />
+                    <button class="btn btn-sm btn-outline-primary">Grant DNS</button>
+                  </form>
+                  {% elif user.is_whitelisted %}
+                  <form method="post" action="/admin/users/{{ user.id }}/whitelist">
+                    <input type="hidden" name="whitelisted" value="false" />
+                    <button class="btn btn-sm btn-outline-secondary">Revoke DNS</button>
+                  </form>
+                  {% endif %}
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

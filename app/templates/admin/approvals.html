@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% block title %}Approval Queue{% endblock %}
+
+{% block content %}
+<div class="portal-page-header">
+  <div>
+    <h4 class="page-title">Approval Queue</h4>
+    <p class="page-subtitle text-muted">DNS change requests awaiting review</p>
+  </div>
+</div>
+
+<div class="px-4">
+  {% if pending_requests %}
+  <div class="card border-0 shadow-sm">
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+          <thead class="table-light">
+            <tr>
+              <th class="px-4 py-3 small fw-semibold text-muted">REQUEST #</th>
+              <th class="py-3 small fw-semibold text-muted">REQUESTER</th>
+              <th class="py-3 small fw-semibold text-muted">ZONE</th>
+              <th class="py-3 small fw-semibold text-muted">ACTION</th>
+              <th class="py-3 small fw-semibold text-muted">RECORDS</th>
+              <th class="py-3 small fw-semibold text-muted">SUBMITTED</th>
+              <th class="py-3 small fw-semibold text-muted">ACTIONS</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for req in pending_requests %}
+            <tr>
+              <td class="px-4 py-3">
+                <a href="/dns-requests/{{ req.id }}" class="fw-medium text-decoration-none">
+                  {{ req.request_number }}
+                </a>
+              </td>
+              <td class="py-3">
+                <div class="small fw-medium">{{ req.requester.full_name }}</div>
+                <div class="text-muted x-small">{{ req.requester.email }}</div>
+              </td>
+              <td class="py-3 text-muted small">{{ req.zone_name }}</td>
+              <td class="py-3">
+                <span class="badge rounded-pill
+                  {% if req.action == 'create' %}bg-success-subtle text-success border border-success-subtle
+                  {% elif req.action == 'modify' %}bg-warning-subtle text-warning border border-warning-subtle
+                  {% else %}bg-danger-subtle text-danger border border-danger-subtle{% endif %}">
+                  {{ req.action | capitalize }}
+                </span>
+              </td>
+              <td class="py-3 text-muted small">{{ req.records | length }}</td>
+              <td class="py-3 text-muted small">
+                {{ req.submitted_at.strftime('%d %b %Y %H:%M') if req.submitted_at else '—' }}
+              </td>
+              <td class="py-3">
+                <a href="/dns-requests/{{ req.id }}" class="btn btn-sm btn-outline-primary">
+                  Review
+                </a>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  {% else %}
+  <div class="card border-0 shadow-sm">
+    <div class="card-body text-center py-5 text-muted">
+      <i class="bi bi-check-circle-fill text-success fs-1 d-block mb-3 opacity-50"></i>
+      <h6 class="fw-semibold">Queue is empty</h6>
+      <p class="mb-0 small">No pending DNS change requests.</p>
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}
