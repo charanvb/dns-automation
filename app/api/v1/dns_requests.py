@@ -10,7 +10,11 @@ from app.database.session import get_db
 from app.exceptions import AppError, ForbiddenError
 from app.micetro.dns_service import dns_service
 from app.models.enums import DNSRecordType, RequestAction
-from app.security.dependencies import require_authenticated_user, require_whitelisted_user
+from app.security.dependencies import (
+    require_approver,
+    require_authenticated_user,
+    require_whitelisted_user,
+)
 from app.services.dns_request_service import DNSRequestService, RecordInput
 
 router = APIRouter(prefix="/dns-requests", tags=["dns_requests"])
@@ -37,13 +41,15 @@ async def zone_search(
     """HTMX endpoint: returns an HTML fragment of matching DNS zones."""
     if len(q.strip()) < 2:
         return HTMLResponse("")
+    micetro_error = False
     try:
         zones = await dns_service.search_zones(q.strip(), limit=25)
     except Exception:
         zones = []
+        micetro_error = True
     return templates.TemplateResponse(
         "partials/zone_suggestions.html",
-        {"request": request, "zones": zones},
+        {"request": request, "zones": zones, "micetro_error": micetro_error},
     )
 
 
@@ -175,9 +181,40 @@ async def request_detail(
     dns_req = await svc.get_by_id(request_id)
     if dns_req is None:
         raise HTTPException(status_code=404)
-    if not current_user.is_admin and str(dns_req.requester_id) != str(current_user.id):
+    if not current_user.is_admin and not current_user.is_approver and str(dns_req.requester_id) != str(current_user.id):
         raise ForbiddenError()
     return templates.TemplateResponse(
         "dns_requests/detail.html",
         {"request": request, "current_user": current_user, "dns_request": dns_req},
     )
+
+
+# ── Approve / Reject ───────────────────────────────────────────────────────
+
+@router.post("/{request_id}/action", response_class=HTMLResponse)
+async def approval_action(
+    request_id: str,
+    request: Request,
+    decision: str = Form(...),
+    comments: str = Form(default=""),
+    current_user=Depends(require_approver),
+    db: AsyncSession = Depends(get_db),
+):
+    """Approve or reject a pending DNS request."""
+    svc = DNSRequestService(db)
+    try:
+        dns_req = await svc.approve_or_reject(
+            request_id=request_id,
+            approver=current_user,
+            decision=decision,
+            comments=comments,
+        )
+    except AppError as exc:
+        _flash(request, exc.detail, "danger")
+        return RedirectResponse(f"/dns-requests/{request_id}", status_code=303)
+
+    if decision == "approve":
+        _flash(request, f"{dns_req.request_number} approved.", "success")
+    else:
+        _flash(request, f"{dns_req.request_number} rejected.", "warning")
+    return RedirectResponse(f"/dns-requests/{dns_req.id}", status_code=303)

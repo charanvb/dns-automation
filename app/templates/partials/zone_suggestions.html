@@ -1,9 +1,14 @@
 {# HTMX partial: zone search results. Rendered by GET /dns-requests/zones/search #}
-{% if zones %}
+{% if micetro_error %}
+<div class="border rounded bg-white mt-1 px-3 py-2 small text-danger">
+  <i class="bi bi-exclamation-triangle me-1"></i>
+  Could not reach Micetro — type the zone name manually.
+</div>
+{% elif zones %}
 <div class="list-group shadow border"
      style="position:absolute;z-index:1050;top:100%;left:0;right:0;max-height:220px;overflow-y:auto">
   {% for zone in zones %}
-  {% set name = zone.name | default(zone.get('name','')) %}
+  {% set name = zone.name | default('') %}
   {% if name %}
   <button type="button"
           class="list-group-item list-group-item-action d-flex align-items-center gap-2 py-2"
@@ -18,5 +23,7 @@
   {% endfor %}
 </div>
 {% else %}
-<div class="text-muted small px-2 py-1 border rounded bg-white mt-1">No matching zones found.</div>
+<div class="border rounded bg-white mt-1 px-3 py-2 small text-muted">
+  <i class="bi bi-search me-1"></i>No matching zones found.
+</div>
 {% endif %}

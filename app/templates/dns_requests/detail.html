@@ -25,6 +25,37 @@
     {# ── Left column ──────────────────────────────────────────────────── #}
     <div class="col-lg-8">
 
+      {# ── Approve / Reject panel (approvers and admins only) ──────────── #}
+      {% if req.status == 'pending_approval' and (current_user.is_admin or current_user.is_approver) %}
+      <div class="card border-0 shadow-sm mb-4" style="border-left: 4px solid #ffc107 !important">
+        <div class="card-header bg-warning-subtle border-bottom py-3">
+          <h6 class="mb-0 fw-semibold text-warning-emphasis">
+            <i class="bi bi-shield-check me-2"></i>Approval Decision
+          </h6>
+        </div>
+        <div class="card-body">
+          <form method="post" action="/dns-requests/{{ req.id }}/action" id="approvalForm">
+            <input type="hidden" name="decision" id="decisionInput" value="">
+            <div class="mb-3">
+              <label class="form-label fw-medium">Comments
+                <span class="text-muted fw-normal">(required for rejection)</span>
+              </label>
+              <textarea name="comments" class="form-control" rows="2"
+                        placeholder="Add any notes for the requester…"></textarea>
+            </div>
+            <div class="d-flex gap-2">
+              <button type="button" class="btn btn-success px-4" onclick="submitDecision('approve')">
+                <i class="bi bi-check-circle me-1"></i>Approve
+              </button>
+              <button type="button" class="btn btn-danger px-4" onclick="submitDecision('reject')">
+                <i class="bi bi-x-circle me-1"></i>Reject
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+      {% endif %}
+
       {# DNS Records #}
       <div class="card border-0 shadow-sm mb-4">
         <div class="card-header bg-transparent border-bottom py-3">
@@ -183,6 +214,23 @@
 
   </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  function submitDecision(decision) {
+    if (decision === 'reject') {
+      const comments = document.querySelector('[name="comments"]').value.trim();
+      if (!comments) {
+        alert('Please add comments when rejecting a request.');
+        return;
+      }
+    }
+    if (!confirm(decision === 'approve' ? 'Approve this DNS request?' : 'Reject this DNS request?')) return;
+    document.getElementById('decisionInput').value = decision;
+    document.getElementById('approvalForm').submit();
+  }
+</script>
 {% endblock %}
 
 {% block head_extra %}

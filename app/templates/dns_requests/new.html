@@ -52,14 +52,21 @@
           <div class="col-md-4">
             <label class="form-label fw-medium">DNS Zone <span class="text-danger">*</span></label>
             <div class="position-relative">
-              <input type="text" name="zone_name" id="zoneInput" class="form-control"
-                     placeholder="Type to search zones…"
-                     value="{{ form.get('zone_name', '') }}"
-                     required autocomplete="off"
-                     hx-get="/dns-requests/zones/search"
-                     hx-trigger="keyup changed delay:350ms"
-                     hx-target="#zoneSuggestions"
-                     hx-vals="js:{q: event.target.value}">
+              <div class="input-group">
+                <input type="text" name="zone_name" id="zoneInput" class="form-control"
+                       placeholder="Type to search zones…"
+                       value="{{ form.get('zone_name', '') }}"
+                       required autocomplete="off"
+                       hx-get="/dns-requests/zones/search"
+                       hx-trigger="keyup changed delay:350ms"
+                       hx-target="#zoneSuggestions"
+                       hx-vals="js:{q: event.target.value}"
+                       hx-indicator="#zoneSpinner">
+                <span class="input-group-text bg-transparent" id="zoneSpinner"
+                      style="display:none">
+                  <span class="spinner-border spinner-border-sm text-secondary" role="status"></span>
+                </span>
+              </div>
               <div id="zoneSuggestions"></div>
             </div>
             <div class="form-text">Start typing to search available zones from Micetro.</div>
@@ -208,6 +215,9 @@
   .page-subtitle { font-size: 0.82rem; margin: 0; }
   #recordsTable td { vertical-align: middle; padding: 0.35rem 0.5rem; }
   #recordsTable th { padding: 0.5rem 0.5rem; font-size: 0.78rem; text-transform: uppercase; letter-spacing: .04em; color: #555; }
+  /* show HTMX spinner while request is in-flight */
+  #zoneSpinner { display: none; }
+  .htmx-request #zoneSpinner { display: flex; }
 </style>
 {% endblock %}
 

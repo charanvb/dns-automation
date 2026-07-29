@@ -124,3 +124,51 @@ class DNSRequestService:
 
     async def get_by_id(self, request_id: str | UUID) -> DNSRequest | None:
         return await self._repo.get_by_id(request_id)
+
+    async def approve_or_reject(
+        self,
+        *,
+        request_id: str | UUID,
+        approver,
+        decision: str,
+        comments: str = "",
+    ) -> DNSRequest:
+        """Approve or reject a pending DNS request and record the approval."""
+        from app.models.approval import Approval
+        from app.models.enums import ApprovalAction
+
+        dns_req = await self._repo.get_by_id(request_id)
+        if dns_req is None:
+            raise AppError("Request not found.")
+        if dns_req.status != RequestStatus.PENDING_APPROVAL:
+            raise AppError(
+                f"Cannot act on a request with status '{dns_req.status}'. "
+                "Only pending_approval requests can be approved or rejected."
+            )
+        if decision == "reject" and not comments.strip():
+            raise AppError("Rejection comments are required.")
+
+        if decision == "approve":
+            action_value = ApprovalAction.APPROVED.value
+            new_status = RequestStatus.APPROVED
+        elif decision == "reject":
+            action_value = ApprovalAction.REJECTED.value
+            new_status = RequestStatus.REJECTED
+        else:
+            raise AppError(f"Invalid decision: '{decision}'.")
+
+        approval = Approval(
+            request_id=dns_req.id,
+            approver_id=approver.id,
+            action=action_value,
+            comments=comments.strip() or None,
+        )
+        self._db.add(approval)
+        dns_req.status = new_status
+
+        await self._db.commit()
+        await self._db.refresh(dns_req)
+        logger.info(
+            "DNS request %s %sd by %s", dns_req.request_number, decision, approver.email
+        )
+        return dns_req
