@@ -58,11 +58,10 @@ class MicetroClient:
         client = self._get_http_client()
         try:
             response = await client.post(
-                "/sessions",
+                "/micetro/sessions",
                 json={
-                    "username": settings.MICETRO_USERNAME,
+                    "loginName": settings.MICETRO_USERNAME,
                     "password": settings.MICETRO_PASSWORD,
-                    "loginAs": settings.MICETRO_USERNAME,
                 },
             )
             response.raise_for_status()
