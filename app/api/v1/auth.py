@@ -9,14 +9,12 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
-from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database.session import get_db
 from app.exceptions import AppError
 from app.security.dependencies import get_optional_user
 from app.services.auth_service import AuthService
-from app.utils.logging import configure_logging
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 templates = Jinja2Templates(directory="app/templates")

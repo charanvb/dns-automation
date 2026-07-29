@@ -88,6 +88,19 @@ def create_app() -> FastAPI:
             status_code=404,
         )
 
+    @app.exception_handler(Exception)
+    async def unhandled_exception_handler(request: Request, exc: Exception):
+        logger.exception("Unhandled exception on %s %s", request.method, request.url.path)
+        try:
+            return templates.TemplateResponse(
+                "errors/500.html",
+                {"request": request, "detail": str(exc)},
+                status_code=500,
+            )
+        except Exception:
+            from fastapi.responses import HTMLResponse
+            return HTMLResponse(f"Internal Server Error: {exc}", status_code=500)
+
     # ── Startup ───────────────────────────────────────────────────────────
     @app.on_event("startup")
     async def on_startup():
@@ -107,40 +120,39 @@ def create_app() -> FastAPI:
 
 async def _seed_initial_data() -> None:
     """
-    Idempotently create:
-    - Default roles: admin, approver, requester
-    - Bootstrap admin user from env vars (only if no users exist)
+    Idempotently create default roles and the bootstrap admin user.
+    Uses a direct table insert for user_roles to avoid relationship
+    complexity with transient objects during seeding.
     """
+    from sqlalchemy import select
+
     from app.database.session import AsyncSessionLocal
     from app.models.role import Role
-    from app.models.user import User
+    from app.models.user import User, user_roles_table
     from app.security.password import hash_password
 
     async with AsyncSessionLocal() as db:
         try:
-            from sqlalchemy import select
-
-            # Seed roles
+            # 1. Seed default roles (idempotent)
+            role_map: dict[str, Role] = {}
             for role_name, description in [
                 ("admin", "Full portal access and user management."),
                 ("approver", "Review and approve or reject DNS change requests."),
                 ("requester", "Submit DNS change requests (requires whitelist)."),
             ]:
                 result = await db.execute(select(Role).where(Role.name == role_name))
-                if result.scalar_one_or_none() is None:
-                    db.add(Role(name=role_name, description=description))
+                role = result.scalar_one_or_none()
+                if role is None:
+                    role = Role(name=role_name, description=description)
+                    db.add(role)
                     logger.info("Created role: %s", role_name)
+                role_map[role_name] = role
 
-            await db.flush()
+            await db.flush()  # persist roles, ensuring their UUIDs are set
 
-            # Seed admin user if no users exist
+            # 2. Seed bootstrap admin if no users exist
             result = await db.execute(select(User).limit(1))
             if result.scalar_one_or_none() is None:
-                admin_role_result = await db.execute(
-                    select(Role).where(Role.name == "admin")
-                )
-                admin_role = admin_role_result.scalar_one_or_none()
-
                 admin = User(
                     email=settings.INITIAL_ADMIN_EMAIL.lower(),
                     full_name=settings.INITIAL_ADMIN_FULL_NAME,
@@ -149,12 +161,22 @@ async def _seed_initial_data() -> None:
                     is_whitelisted=True,
                     is_superuser=True,
                 )
-                if admin_role:
-                    admin.roles = [admin_role]
                 db.add(admin)
+                await db.flush()  # get admin.id before inserting into user_roles
+
+                # Direct insert avoids any relationship ambiguity during seeding
+                admin_role = role_map.get("admin")
+                if admin_role:
+                    await db.execute(
+                        user_roles_table.insert().values(
+                            user_id=admin.id,
+                            role_id=admin_role.id,
+                        )
+                    )
                 logger.info("Created bootstrap admin: %s", settings.INITIAL_ADMIN_EMAIL)
 
             await db.commit()
+            logger.info("Seed data applied successfully.")
         except Exception:
             await db.rollback()
             logger.exception("Seed data failed — continuing startup anyway.")
