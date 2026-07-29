@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database.session import get_db
 from app.exceptions import AppError, ForbiddenError
+from app.micetro.dns_service import dns_service
 from app.models.enums import DNSRecordType, RequestAction
 from app.security.dependencies import require_authenticated_user, require_whitelisted_user
 from app.services.dns_request_service import DNSRequestService, RecordInput
@@ -22,6 +23,27 @@ ACTIONS = [e.value for e in RequestAction]
 def _flash(request: Request, message: str, category: str = "info") -> None:
     request.session.setdefault("flash", []).append(
         {"message": message, "category": category}
+    )
+
+
+# ── Zone search (HTMX) ───────────────────────────────────────────────────────
+
+@router.get("/zones/search", response_class=HTMLResponse)
+async def zone_search(
+    request: Request,
+    q: str = "",
+    current_user=Depends(require_whitelisted_user),
+):
+    """HTMX endpoint: returns an HTML fragment of matching DNS zones."""
+    if len(q.strip()) < 2:
+        return HTMLResponse("")
+    try:
+        zones = await dns_service.search_zones(q.strip(), limit=25)
+    except Exception:
+        zones = []
+    return templates.TemplateResponse(
+        "partials/zone_suggestions.html",
+        {"request": request, "zones": zones},
     )
 
 

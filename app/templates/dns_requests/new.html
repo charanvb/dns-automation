@@ -51,11 +51,18 @@
 
           <div class="col-md-4">
             <label class="form-label fw-medium">DNS Zone <span class="text-danger">*</span></label>
-            <input type="text" name="zone_name" class="form-control"
-                   placeholder="e.g. unilever.com"
-                   value="{{ form.get('zone_name', '') }}"
-                   required autocomplete="off">
-            <div class="form-text">Enter the zone name without trailing dot.</div>
+            <div class="position-relative">
+              <input type="text" name="zone_name" id="zoneInput" class="form-control"
+                     placeholder="Type to search zones…"
+                     value="{{ form.get('zone_name', '') }}"
+                     required autocomplete="off"
+                     hx-get="/dns-requests/zones/search"
+                     hx-trigger="keyup changed delay:350ms"
+                     hx-target="#zoneSuggestions"
+                     hx-vals="js:{q: event.target.value}">
+              <div id="zoneSuggestions"></div>
+            </div>
+            <div class="form-text">Start typing to search available zones from Micetro.</div>
           </div>
 
           <div class="col-md-4">
@@ -223,6 +230,18 @@
     btn.closest('tr').remove();
     updateRemoveButtons();
   }
+
+  function selectZone(name) {
+    document.getElementById('zoneInput').value = name;
+    document.getElementById('zoneSuggestions').innerHTML = '';
+  }
+
+  // Close zone dropdown when clicking outside
+  document.addEventListener('click', function(e) {
+    if (!e.target.closest('#zoneInput') && !e.target.closest('#zoneSuggestions')) {
+      document.getElementById('zoneSuggestions').innerHTML = '';
+    }
+  });
 
   function updateRemoveButtons() {
     const rows = document.querySelectorAll('.record-row');

@@ -84,6 +84,7 @@ class DNSRequest(Base):
         back_populates="request",
         cascade="all, delete-orphan",
         order_by="Approval.acted_at",
+        lazy="selectin",
     )
 
     def __repr__(self) -> str:

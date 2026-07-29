@@ -1,0 +1,22 @@
+{# HTMX partial: zone search results. Rendered by GET /dns-requests/zones/search #}
+{% if zones %}
+<div class="list-group shadow border"
+     style="position:absolute;z-index:1050;top:100%;left:0;right:0;max-height:220px;overflow-y:auto">
+  {% for zone in zones %}
+  {% set name = zone.name | default(zone.get('name','')) %}
+  {% if name %}
+  <button type="button"
+          class="list-group-item list-group-item-action d-flex align-items-center gap-2 py-2"
+          onclick="selectZone('{{ name | e }}')">
+    <i class="bi bi-diagram-3 text-muted flex-shrink-0"></i>
+    <span class="fw-medium">{{ name }}</span>
+    {% if zone.type %}
+    <span class="badge bg-secondary-subtle text-secondary ms-auto">{{ zone.type }}</span>
+    {% endif %}
+  </button>
+  {% endif %}
+  {% endfor %}
+</div>
+{% else %}
+<div class="text-muted small px-2 py-1 border rounded bg-white mt-1">No matching zones found.</div>
+{% endif %}

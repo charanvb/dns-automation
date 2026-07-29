@@ -167,7 +167,7 @@
           </dl>
 
           {# Submit draft action #}
-          {% if req.status == 'draft' and (current_user.is_admin or str(req.requester_id) == str(current_user.id)) %}
+          {% if req.status == 'draft' and (current_user.is_admin or (req.requester_id | string) == (current_user.id | string)) %}
           <hr>
           <form method="post" action="/dns-requests/{{ req.id }}/submit">
             <button type="submit" class="btn btn-primary w-100"
