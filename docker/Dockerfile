@@ -1,4 +1,4 @@
-FROM python:3.12-slim
+FROM mirror.gcr.io/library/python:3.12-slim
 
 # System dependencies for psycopg2
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -14,8 +14,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy application code
 COPY . .
 
-# Make entrypoint executable
-RUN chmod +x docker/entrypoint.sh
+# Make entrypoint executable and strip Windows CRLF line endings
+RUN sed -i 's/\r$//' docker/entrypoint.sh && chmod +x docker/entrypoint.sh
 
 # Non-root user for security
 RUN addgroup --system appgroup && adduser --system --ingroup appgroup appuser
