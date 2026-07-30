@@ -1,0 +1,21 @@
+
+m azure.mgmt.resource import ResourceManagementClient
+
+# Your default subscription
+subscription_id = "67a2e300-52b5-4021-a513-dc7f202cb569"
+
+credential = DefaultAzureCredential()
+
+client = ResourceManagementClient(
+    credential,
+    subscription_id
+)
+
+print("=" * 60)
+print("Resource Groups")
+print("=" * 60)
+
+for rg in client.resource_groups.list():
+    print(f"Name     : {rg.name}")
+    print(f"Location : {rg.location}")
+    print("-" * 60)
